@@ -1,0 +1,21 @@
+{
+  "name": "BodyPress - Your Body, Briefed Daily",
+  "short_name": "BodyPress",
+  "description": "AI-powered daily briefing that turns your wearable data into actionable health insights.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141520",
+  "theme_color": "#141520",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
