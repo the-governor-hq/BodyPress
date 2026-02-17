@@ -13,12 +13,12 @@ export function CtaSection() {
   }
 
   return (
-    <section className="px-6 py-20">
-      <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-10 text-center md:p-14">
-        <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+    <section className="px-4 py-16 sm:px-6 sm:py-20">
+      <div className="mx-auto max-w-2xl rounded-xl sm:rounded-2xl border border-border bg-card p-6 sm:p-10 text-center md:p-14">
+        <h2 className="text-balance text-2xl sm:text-3xl font-bold tracking-tight text-foreground md:text-4xl">
           Start reading your body
         </h2>
-        <p className="mx-auto mt-4 max-w-md text-pretty leading-relaxed text-muted-foreground">
+        <p className="mx-auto mt-3 sm:mt-4 max-w-md text-sm sm:text-base text-pretty leading-relaxed text-muted-foreground">
           Join thousands of health-conscious people who start their morning
           with BodyPress.
         </p>
@@ -26,7 +26,7 @@ export function CtaSection() {
         {!submitted ? (
           <form
             onSubmit={handleSubmit}
-            className="mx-auto mt-8 flex max-w-sm flex-col gap-3 sm:flex-row"
+            className="mx-auto mt-6 sm:mt-8 flex max-w-sm flex-col gap-3 sm:flex-row"
           >
             <label htmlFor="cta-email" className="sr-only">
               Email address
@@ -49,14 +49,14 @@ export function CtaSection() {
             </button>
           </form>
         ) : (
-          <div className="mx-auto mt-8 max-w-sm rounded-lg border border-primary/30 bg-primary/10 px-6 py-4">
+          <div className="mx-auto mt-6 sm:mt-8 max-w-sm rounded-lg border border-primary/30 bg-primary/10 px-6 py-4">
             <p className="text-sm font-medium text-primary">
               Welcome aboard. Your first briefing is on its way.
             </p>
           </div>
         )}
 
-        <p className="mt-4 text-xs text-muted-foreground">
+        <p className="mt-3 sm:mt-4 text-xs text-muted-foreground">
           Free forever. Delivered before you wake up.
         </p>
       </div>

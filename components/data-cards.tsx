@@ -74,38 +74,38 @@ const metrics = [
 
 export function DataCards() {
   return (
-    <section className="px-6 py-20">
+    <section className="px-4 py-16 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-12 text-center">
-          <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+        <div className="mb-10 sm:mb-12 text-center">
+          <h2 className="text-balance text-2xl sm:text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             All your signals, one briefing
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-pretty leading-relaxed text-muted-foreground">
+          <p className="mx-auto mt-3 sm:mt-4 max-w-lg text-sm sm:text-base text-pretty leading-relaxed text-muted-foreground">
             We pull data from your smartwatch and cross-reference it with
             real-time environmental factors from your location.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 md:gap-4">
           {metrics.map((m) => (
             <div
               key={m.label}
-              className={`group relative overflow-hidden rounded-xl border ${m.borderColor} ${m.bgColor} p-5 transition-all hover:scale-[1.02]`}
+              className={`group relative overflow-hidden rounded-xl border ${m.borderColor} ${m.bgColor} p-3.5 sm:p-5 transition-all hover:scale-[1.02]`}
             >
-              <div className="flex items-center gap-2">
-                <m.icon className={`h-4 w-4 ${m.color}`} />
-                <span className="font-mono text-xs tracking-wider text-muted-foreground uppercase">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <m.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${m.color}`} />
+                <span className="font-mono text-[10px] sm:text-xs tracking-wider text-muted-foreground uppercase">
                   {m.label}
                 </span>
               </div>
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className={`text-3xl font-bold ${m.color}`}>
+              <div className="mt-2 sm:mt-3 flex items-baseline gap-1">
+                <span className={`text-2xl sm:text-3xl font-bold ${m.color}`}>
                   {m.value}
                 </span>
-                <span className="text-sm text-muted-foreground">{m.unit}</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">{m.unit}</span>
               </div>
               {m.change && (
-                <span className="mt-2 inline-block font-mono text-xs text-muted-foreground">
+                <span className="mt-1.5 sm:mt-2 inline-block font-mono text-[10px] sm:text-xs text-muted-foreground">
                   {m.change}
                 </span>
               )}

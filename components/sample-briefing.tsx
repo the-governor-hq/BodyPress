@@ -4,60 +4,63 @@ import { Sparkles, MapPin, Clock } from "lucide-react"
 
 export function SampleBriefing() {
   return (
-    <section className="px-6 py-20">
+    <section className="px-4 py-16 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-12 text-center">
-          <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+        <div className="mb-10 sm:mb-12 text-center">
+          <h2 className="text-balance text-2xl sm:text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             {"Here's"} what your briefing looks like
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-pretty leading-relaxed text-muted-foreground">
+          <p className="mx-auto mt-3 sm:mt-4 max-w-lg text-sm sm:text-base text-pretty leading-relaxed text-muted-foreground">
             A real sample from our AI engine — personalized, contextual,
             actionable.
           </p>
         </div>
 
         {/* Mock email */}
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-card">
           {/* Email header */}
-          <div className="flex items-center gap-3 border-b border-border px-6 py-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15">
-              <Sparkles className="h-4 w-4 text-primary" />
+          <div className="flex items-center gap-2 sm:gap-3 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-primary/15 shrink-0">
+              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
                 BodyPress Daily Briefing
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Monday, February 17 2026
               </p>
             </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground shrink-0">
               <Clock className="h-3 w-3" />
-              <span>6:30 AM</span>
+              <span className="hidden xs:inline">6:30 AM</span>
+              <span className="xs:hidden">6:30</span>
             </div>
           </div>
 
           {/* Email body */}
-          <div className="px-6 py-6">
+          <div className="px-4 py-5 sm:px-6 sm:py-6">
             {/* Location bar */}
-            <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3" />
-              <span className="font-mono uppercase tracking-wider">
-                San Francisco, CA
-              </span>
-              <span className="text-border">|</span>
+            <div className="mb-5 sm:mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] sm:text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span className="font-mono uppercase tracking-wider">
+                  San Francisco, CA
+                </span>
+              </div>
+              <span className="text-border hidden xs:inline">|</span>
               <span>63{"\u00b0"}F Partly Cloudy</span>
-              <span className="text-border">|</span>
+              <span className="text-border hidden xs:inline">|</span>
               <span>AQI 42 Good</span>
             </div>
 
             {/* Greeting */}
-            <p className="text-lg font-semibold text-foreground">
+            <p className="text-base sm:text-lg font-semibold text-foreground">
               Good morning. {"Here's"} your body briefing.
             </p>
 
             {/* Summary cards */}
-            <div className="mt-6 space-y-4">
+            <div className="mt-5 sm:mt-6 space-y-3 sm:space-y-4">
               <BriefingBlock
                 title="Sleep Analysis"
                 emoji={""}
@@ -85,9 +88,9 @@ export function SampleBriefing() {
             </div>
 
             {/* Divider */}
-            <div className="my-6 border-t border-border" />
+            <div className="my-5 sm:my-6 border-t border-border" />
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
               Powered by AI agents analyzing your Apple Watch data, local
               weather APIs, and environmental sensors. Your data is never
               shared.
@@ -110,9 +113,9 @@ function BriefingBlock({
   content: string
 }) {
   return (
-    <div className="rounded-lg border border-border bg-secondary/50 p-4">
-      <h3 className={`text-sm font-semibold ${color}`}>{title}</h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+    <div className="rounded-lg border border-border bg-secondary/50 p-3 sm:p-4">
+      <h3 className={`text-xs sm:text-sm font-semibold ${color}`}>{title}</h3>
+      <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
         {content}
       </p>
     </div>
