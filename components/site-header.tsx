@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Activity, Menu, X } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -30,6 +31,7 @@ export function SiteHeader() {
           >
             Sample
           </a>
+          <ThemeToggle />
           <a
             href="#subscribe"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
@@ -75,6 +77,9 @@ export function SiteHeader() {
               >
                 Subscribe
               </a>
+              <div className="pt-1">
+                <ThemeToggle />
+              </div>
             </div>
           </div>
         </nav>
