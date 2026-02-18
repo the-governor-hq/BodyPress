@@ -1,15 +1,22 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { ArrowRight } from "lucide-react"
 
 export function CtaSection() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (email) setSubmitted(true)
+    if (email) {
+      // Store email in localStorage for the onboarding process
+      localStorage.setItem("userEmail", email)
+      // Redirect to onboarding
+      router.push("/onboarding")
+    }
   }
 
   return (
