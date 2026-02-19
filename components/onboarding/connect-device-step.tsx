@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Watch, Activity, Heart, Clock, TrendingUp, Shield } from "lucide-react"
+import { Watch, Activity, Heart, Clock, TrendingUp, Shield, Mail } from "lucide-react"
 import { motion } from "framer-motion"
+import { isAuthenticated } from "@/lib/auth"
+import { getOAuthConnectUrl } from "@/lib/api"
 
 interface ConnectDeviceStepProps {
   formData: { device: string }
@@ -67,16 +69,18 @@ const METRICS = [
 export function ConnectDeviceStep({ formData, updateFormData }: ConnectDeviceStepProps) {
   const [selectedDevice, setSelectedDevice] = useState(formData.device)
   const [isConnecting, setIsConnecting] = useState(false)
+  const authed = isAuthenticated()
 
-  const handleConnect = async (deviceId: string) => {
+  const handleConnect = (deviceId: string) => {
+    if (!authed) return
+    if (deviceId !== "garmin" && deviceId !== "fitbit") return
+
     setIsConnecting(true)
     setSelectedDevice(deviceId)
-    
-    // Simulate OAuth flow
-    setTimeout(() => {
-      updateFormData({ device: deviceId })
-      setIsConnecting(false)
-    }, 1500)
+    updateFormData({ device: deviceId })
+
+    // Redirect to backend OAuth — backend will redirect back to frontend after auth
+    window.location.href = getOAuthConnectUrl(deviceId as "garmin" | "fitbit")
   }
 
   return (
@@ -90,6 +94,18 @@ export function ConnectDeviceStep({ formData, updateFormData }: ConnectDeviceSte
         </p>
       </div>
 
+      {!authed && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <Mail className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Verify your email first</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              We sent you a magic link. Click it to authenticate, then come back here to connect your device.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Device Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {DEVICES.map((device) => (
@@ -100,11 +116,11 @@ export function ConnectDeviceStep({ formData, updateFormData }: ConnectDeviceSte
           >
             <button
               onClick={() => device.available && handleConnect(device.id)}
-              disabled={!device.available || isConnecting}
+              disabled={!device.available || isConnecting || !authed}
               className={`relative w-full p-6 rounded-xl border-2 transition-all text-left ${
                 selectedDevice === device.id
                   ? "border-primary bg-primary/5"
-                  : device.available
+                  : device.available && authed
                   ? "border-border hover:border-primary/50 bg-background"
                   : "border-border bg-muted/30 opacity-60 cursor-not-allowed"
               }`}

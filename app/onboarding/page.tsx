@@ -1,12 +1,20 @@
 "use client"
 
-import { useState, Fragment } from "react"
+import { useState, useEffect, Fragment } from "react"
+import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, ArrowLeft, Check } from "lucide-react"
 import { WelcomeStep } from "@/components/onboarding/welcome-step"
 import { PreferencesStep } from "@/components/onboarding/preferences-step"
 import { ConnectDeviceStep } from "@/components/onboarding/connect-device-step"
 import { SuccessStep } from "@/components/onboarding/success-step"
+import {
+  getPendingEmail,
+  getOnboardingData,
+  setOnboardingData,
+  isAuthenticated,
+} from "@/lib/auth"
+import { updateProfile, requestMagicLink, ApiError } from "@/lib/api"
 
 const STEPS = [
   { id: "welcome", title: "Welcome", component: WelcomeStep },
@@ -16,7 +24,9 @@ const STEPS = [
 ]
 
 export default function OnboardingPage() {
+  const searchParams = useSearchParams()
   const [currentStep, setCurrentStep] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     goals: [] as string[],
@@ -24,7 +34,58 @@ export default function OnboardingPage() {
     device: "",
   })
 
-  const handleNext = () => {
+  // Hydrate from localStorage; handle OAuth return redirect
+  useEffect(() => {
+    const saved = getOnboardingData()
+    if (saved.name || saved.goals || saved.timezone) {
+      setFormData((prev) => ({ ...prev, ...saved }))
+    }
+    const connected = searchParams.get("connected")
+    if (connected) {
+      setFormData((prev) => ({ ...prev, device: connected }))
+      setOnboardingData({ device: connected })
+      setCurrentStep(3) // jump to Success
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleNext = async () => {
+    const isPreferencesStep = currentStep === 1 // 0=welcome, 1=preferences, 2=connect, 3=success
+    const isConnectStep = currentStep === 2
+
+    // Persist formData to localStorage on every advance
+    setOnboardingData(formData)
+
+    if (isPreferencesStep) {
+      // After preferences, send magic link if not yet authenticated
+      const email = getPendingEmail()
+      if (email && !isAuthenticated()) {
+        try {
+          await requestMagicLink(email)
+        } catch {
+          // Non-blocking — user may already have a valid link
+        }
+      }
+    }
+
+    if (isConnectStep && isAuthenticated()) {
+      // Save profile before moving to success
+      setSubmitting(true)
+      try {
+        await updateProfile({
+          name: formData.name || undefined,
+          goals: formData.goals,
+          timezone: formData.timezone || undefined,
+          onboardingDone: true,
+        })
+      } catch (err) {
+        if (err instanceof ApiError && err.status !== 401) {
+          // Still advance on non-auth errors; profile can be updated later
+        }
+      } finally {
+        setSubmitting(false)
+      }
+    }
+
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1)
     }
@@ -37,7 +98,7 @@ export default function OnboardingPage() {
   }
 
   const updateFormData = (data: Partial<typeof formData>) => {
-    setFormData({ ...formData, ...data })
+    setFormData((prev) => ({ ...prev, ...data }))
   }
 
   const CurrentStepComponent = STEPS[currentStep].component
@@ -129,10 +190,11 @@ export default function OnboardingPage() {
 
             <button
               onClick={handleNext}
-              className="group inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:brightness-110 transition-all"
+              disabled={submitting}
+              className="group inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-60"
             >
-              {currentStep === STEPS.length - 2 ? "Finish" : "Continue"}
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              {submitting ? "Finishing…" : currentStep === STEPS.length - 2 ? "Finish" : "Continue"}
+              {!submitting && <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />}
             </button>
           </div>
         )}
