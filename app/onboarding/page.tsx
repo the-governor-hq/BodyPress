@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Fragment } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, ArrowLeft, Check } from "lucide-react"
 import { WelcomeStep } from "@/components/onboarding/welcome-step"
@@ -14,7 +14,8 @@ import {
   setOnboardingData,
   isAuthenticated,
 } from "@/lib/auth"
-import { updateProfile, subscribe, ApiError } from "@/lib/api"
+import { updateProfile, ApiError } from "@/lib/api"
+import { useSessionStore } from "@/lib/session-store"
 
 const STEPS = [
   { id: "welcome", title: "Welcome", component: WelcomeStep },
@@ -25,6 +26,9 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const sessionPendingEmail = useSessionStore((state) => state.pendingEmail)
+  const hasHydrated = useSessionStore((state) => state.hasHydrated)
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState({
@@ -36,6 +40,20 @@ export default function OnboardingPage() {
 
   // Hydrate from localStorage; handle OAuth return redirect
   useEffect(() => {
+    if (!hasHydrated) return
+
+    const authenticated = isAuthenticated()
+    const pendingEmail = sessionPendingEmail ?? getPendingEmail()
+    if (!authenticated && !pendingEmail) {
+      console.warn("[Onboarding] Unauthenticated access without pending email. Redirecting to home.")
+      router.replace("/")
+      return
+    }
+
+    if (authenticated && !pendingEmail) {
+      console.log("[Onboarding] Authenticated session without pending email; continuing onboarding.")
+    }
+
     const saved = getOnboardingData()
     if (saved.name || saved.goals || saved.timezone) {
       setFormData((prev) => ({ ...prev, ...saved }))
@@ -48,7 +66,7 @@ export default function OnboardingPage() {
       // Clear onboarding flow flag
       sessionStorage.removeItem("onboarding_flow")
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [router, searchParams, hasHydrated, sessionPendingEmail])
 
   const handleNext = async () => {
     const isPreferencesStep = currentStep === 1 // 0=welcome, 1=preferences, 2=connect, 3=success
@@ -61,28 +79,7 @@ export default function OnboardingPage() {
     setOnboardingData(formData)
 
     if (isPreferencesStep) {
-      // After preferences, subscribe user (backend sends verification email with magic link)
-      const email = getPendingEmail()
-      const authenticated = isAuthenticated()
-      console.log("[Onboarding] Preferences step - Email:", email, "Authenticated:", authenticated)
-      
-      if (email && !authenticated) {
-        try {
-          console.log("[Onboarding] Subscribing user to send verification email:", email)
-          await subscribe({
-            email,
-            name: formData.name || undefined,
-            timezone: formData.timezone || undefined,
-            goals: formData.goals,
-          })
-          console.log("[Onboarding] Verification email sent via subscribe endpoint")
-        } catch (err) {
-          console.error("[Onboarding] Subscribe error:", err)
-          // Non-blocking — user may already have a valid link
-        }
-      } else {
-        console.log("[Onboarding] Skipping subscribe - Email:", !!email, "Not Authenticated:", !authenticated)
-      }
+      console.log("[Onboarding] Preferences complete; verification email is handled on Connect Device step")
     }
 
     if (isConnectStep && isAuthenticated()) {

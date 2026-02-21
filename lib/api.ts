@@ -34,6 +34,22 @@ const apiClient = axios.create({
   },
 })
 
+function buildDebugUrl(config: AxiosRequestConfig): string {
+  const base = (config.baseURL ?? BASE_URL).replace(/\/$/, "")
+  const path = String(config.url ?? "")
+  const joined = /^https?:\/\//i.test(path) ? path : `${base}${path.startsWith("/") ? "" : "/"}${path}`
+  const params = config.params
+  if (!params || typeof params !== "object") return joined
+
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) return
+    query.set(key, String(value))
+  })
+  const queryString = query.toString()
+  return queryString ? `${joined}?${queryString}` : joined
+}
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
@@ -43,7 +59,11 @@ apiClient.interceptors.request.use(
     }
     // Log API calls in development
     if (process.env.NODE_ENV === "development") {
-      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, config.data || "")
+      const debugUrl = buildDebugUrl(config)
+      console.log(`[API ->] ${config.method?.toUpperCase()} ${debugUrl}`, {
+        data: config.data || null,
+        hasAuth: Boolean(token),
+      })
     }
     return config
   },
@@ -58,13 +78,22 @@ apiClient.interceptors.response.use(
   (response) => {
     // Log successful responses in development
     if (process.env.NODE_ENV === "development") {
-      console.log(`[API] ✓ ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data)
+      const debugUrl = buildDebugUrl(response.config)
+      console.log(
+        `[API <-] ${response.status} ${response.config.method?.toUpperCase()} ${debugUrl}`,
+        response.data,
+      )
     }
     return response
   },
   (error: AxiosError) => {
     if (process.env.NODE_ENV === "development") {
-      console.error("[API] ✗ Error:", error.message, error.response?.data)
+      const debugUrl = buildDebugUrl(error.config ?? {})
+      console.error(
+        `[API !!] ${error.response?.status ?? "ERR"} ${error.config?.method?.toUpperCase()} ${debugUrl}`,
+        error.message,
+        error.response?.data,
+      )
     }
     
     const status = error.response?.status || 500

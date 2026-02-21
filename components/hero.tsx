@@ -3,17 +3,23 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRight, Activity } from "lucide-react"
+import { setPendingEmail } from "@/lib/auth"
+import { useSessionStore } from "@/lib/session-store"
 
 export function Hero() {
   const router = useRouter()
+  const setSessionPendingEmail = useSessionStore((state) => state.setPendingEmail)
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (email) {
-      // Store email in localStorage for the onboarding process
-      localStorage.setItem("userEmail", email)
+      // Store email for onboarding subscribe/verification flow
+      setPendingEmail(email)
+      setSessionPendingEmail(email)
+      // Reset per-session subscribe guard for a fresh onboarding attempt
+      sessionStorage.removeItem("onboarding_subscribe_sent")
       // Redirect to onboarding
       router.push("/onboarding")
     }

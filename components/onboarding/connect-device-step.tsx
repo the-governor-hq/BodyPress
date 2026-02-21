@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Watch, Activity, Heart, Clock, TrendingUp, Shield, Mail } from "lucide-react"
 import { motion } from "framer-motion"
-import { isAuthenticated } from "@/lib/auth"
-import { getOAuthConnectUrl } from "@/lib/api"
+import { isAuthenticated, getPendingEmail, getOnboardingData } from "@/lib/auth"
+import { getOAuthConnectUrl, subscribe } from "@/lib/api"
+import { useSessionStore } from "@/lib/session-store"
 
 interface ConnectDeviceStepProps {
   formData: { device: string }
@@ -70,6 +71,56 @@ export function ConnectDeviceStep({ formData, updateFormData }: ConnectDeviceSte
   const [selectedDevice, setSelectedDevice] = useState(formData.device)
   const [isConnecting, setIsConnecting] = useState(false)
   const authed = isAuthenticated()
+  const sessionPendingEmail = useSessionStore((state) => state.pendingEmail)
+  const hasHydrated = useSessionStore((state) => state.hasHydrated)
+
+  useEffect(() => {
+    if (!hasHydrated) return
+
+    const sendVerificationEmail = async () => {
+      const alreadySent = sessionStorage.getItem("onboarding_subscribe_sent") === "true"
+      if (alreadySent) {
+        console.log("[ConnectDeviceStep] Skipping subscribe: already sent in this session")
+        return
+      }
+
+      if (authed) {
+        console.log("[ConnectDeviceStep] Skipping subscribe: already authenticated")
+        return
+      }
+
+      const email = sessionPendingEmail ?? getPendingEmail()
+      if (!email) {
+        console.warn("[ConnectDeviceStep] Cannot subscribe: missing pending email in localStorage (bp_email)")
+        return
+      }
+
+      const onboardingData = getOnboardingData()
+
+      try {
+        console.log("[ConnectDeviceStep] Calling POST /v1/subscribers", {
+          email,
+          name: onboardingData.name,
+          timezone: onboardingData.timezone,
+          goals: onboardingData.goals,
+        })
+
+        await subscribe({
+          email,
+          name: onboardingData.name || undefined,
+          timezone: onboardingData.timezone || undefined,
+          goals: onboardingData.goals,
+        })
+
+        sessionStorage.setItem("onboarding_subscribe_sent", "true")
+        console.log("[ConnectDeviceStep] POST /v1/subscribers succeeded")
+      } catch (error) {
+        console.error("[ConnectDeviceStep] POST /v1/subscribers failed", error)
+      }
+    }
+
+    void sendVerificationEmail()
+  }, [authed, hasHydrated, sessionPendingEmail])
 
   const handleConnect = (deviceId: string) => {
     if (!authed) return

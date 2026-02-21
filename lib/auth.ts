@@ -1,5 +1,6 @@
 const JWT_KEY = "bp_token"
 const EMAIL_KEY = "bp_email"
+const LEGACY_EMAIL_KEY = "userEmail"
 const ONBOARDING_KEY = "bp_onboarding"
 
 export type OnboardingData = {
@@ -39,7 +40,7 @@ export function isAuthenticated(): boolean {
 
 export function getPendingEmail(): string | null {
   if (typeof window === "undefined") return null
-  return localStorage.getItem(EMAIL_KEY)
+  return localStorage.getItem(EMAIL_KEY) ?? localStorage.getItem(LEGACY_EMAIL_KEY)
 }
 
 export function setPendingEmail(email: string): void {
@@ -48,6 +49,7 @@ export function setPendingEmail(email: string): void {
 
 export function clearPendingEmail(): void {
   localStorage.removeItem(EMAIL_KEY)
+  localStorage.removeItem(LEGACY_EMAIL_KEY)
 }
 
 // ── Onboarding state ──────────────────────────────────────────────────────────

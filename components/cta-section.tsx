@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation"
 import { ArrowRight } from "lucide-react"
 import { subscribe, ApiError } from "@/lib/api"
 import { setPendingEmail } from "@/lib/auth"
+import { useSessionStore } from "@/lib/session-store"
 
 export function CtaSection() {
   const router = useRouter()
+  const setSessionPendingEmail = useSessionStore((state) => state.setPendingEmail)
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -21,6 +23,8 @@ export function CtaSection() {
     try {
       await subscribe(email)
       setPendingEmail(email)
+      setSessionPendingEmail(email)
+      sessionStorage.removeItem("onboarding_subscribe_sent")
       setSubmitted(true)
       setTimeout(() => router.push("/onboarding"), 1200)
     } catch (err) {
