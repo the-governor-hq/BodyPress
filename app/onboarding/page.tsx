@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth"
 import { updateProfile, ApiError } from "@/lib/api"
 import { useAuthSession } from "@/hooks/use-auth-session"
+import { toast } from "@/hooks/use-toast"
 
 const STEPS = [
   { id: "welcome", title: "Welcome", component: WelcomeStep },
@@ -50,7 +51,22 @@ export default function OnboardingPage() {
       setFormData((prev) => ({ ...prev, ...saved }))
     }
 
-    // Handle OAuth callback
+    // Handle OAuth callback errors - redirect to dashboard
+    const error = searchParams.get("error")
+    const provider = searchParams.get("provider")
+    if (error) {
+      console.error("[Onboarding] OAuth error:", error, "provider:", provider)
+      const providerName = provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : "Device"
+      toast({
+        title: "Connection Failed",
+        description: `Failed to connect ${providerName}. Please try again.`,
+        variant: "destructive",
+      })
+      router.replace("/dashboard")
+      return
+    }
+
+    // Handle OAuth callback success
     const connected = searchParams.get("connected")
     if (connected) {
       setFormData((prev) => ({ ...prev, device: connected }))
@@ -58,7 +74,7 @@ export default function OnboardingPage() {
       setCurrentStep(3)
       sessionStorage.removeItem("onboarding_flow")
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   if (loading) {
     return (
