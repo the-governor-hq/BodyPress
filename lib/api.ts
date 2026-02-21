@@ -1,7 +1,18 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios"
 import { getToken } from "./auth"
 
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "")
+function resolveBaseUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL
+  const trimmed = raw?.trim()
+  if (!trimmed) return "http://localhost:4000"
+  return trimmed.replace(/\/$/, "")
+}
+
+const BASE_URL = resolveBaseUrl()
+
+if (process.env.NODE_ENV === "development") {
+  console.log("[API] Base URL:", BASE_URL)
+}
 
 export class ApiError extends Error {
   constructor(
@@ -101,17 +112,27 @@ export interface SubscribeResponse {
   isNew: boolean
 }
 
-export function subscribe(email: string): Promise<SubscribeResponse> {
+export interface SubscribePayload {
+  email: string
+  name?: string
+  timezone?: string
+  goals?: string[]
+}
+
+export function subscribe(payload: SubscribePayload | string): Promise<SubscribeResponse> {
+  const body: SubscribePayload =
+    typeof payload === "string" ? { email: payload } : payload
+
   return request<SubscribeResponse>("/v1/subscribers", {
     method: "POST",
-    data: { email },
+    data: body,
   })
 }
 
 export function unsubscribe(email: string): Promise<void> {
   return request<void>("/v1/subscribers", {
     method: "DELETE",
-    data: { email },
+    params: { email },
   })
 }
 
@@ -121,10 +142,18 @@ export interface MagicLinkResponse {
   message: string
 }
 
-export function requestMagicLink(email: string): Promise<MagicLinkResponse> {
+export interface RequestMagicLinkPayload {
+  email: string
+  name?: string
+}
+
+export function requestMagicLink(payload: RequestMagicLinkPayload | string): Promise<MagicLinkResponse> {
+  const body: RequestMagicLinkPayload =
+    typeof payload === "string" ? { email: payload } : payload
+
   return request<MagicLinkResponse>("/v1/auth/request-link", {
     method: "POST",
-    data: { email },
+    data: body,
   })
 }
 
@@ -159,6 +188,7 @@ export interface UpdateProfilePayload {
   timezone?: string
   goals?: string[]
   notifyAt?: string
+  newsletterOptIn?: boolean
   onboardingDone?: boolean
 }
 
@@ -213,12 +243,35 @@ export interface SyncResponse {
   provider: string
 }
 
-export function triggerSync(provider: "garmin" | "fitbit"): Promise<SyncResponse> {
-  return request<SyncResponse>(`/v1/wearables/${provider}/sync`, { method: "POST" }, true)
+export interface TriggerSyncPayload {
+  startDate?: string
+  endDate?: string
 }
 
-export function triggerBackfill(provider: "garmin" | "fitbit"): Promise<SyncResponse> {
-  return request<SyncResponse>(`/v1/wearables/${provider}/backfill`, { method: "POST" }, true)
+export function triggerSync(
+  provider: "garmin" | "fitbit",
+  payload?: TriggerSyncPayload,
+): Promise<SyncResponse> {
+  return request<SyncResponse>(
+    `/v1/wearables/${provider}/sync`,
+    { method: "POST", data: payload },
+    true,
+  )
+}
+
+export interface TriggerBackfillPayload {
+  daysBack?: number
+}
+
+export function triggerBackfill(
+  provider: "garmin" | "fitbit",
+  payload?: TriggerBackfillPayload,
+): Promise<SyncResponse> {
+  return request<SyncResponse>(
+    `/v1/wearables/${provider}/backfill`,
+    { method: "POST", data: payload },
+    true,
+  )
 }
 
 export interface Activity {
@@ -240,14 +293,16 @@ export interface ActivitiesResponse {
 
 export function getActivities(params?: {
   provider?: string
+  startDate?: string
+  endDate?: string
   from?: string
   to?: string
   limit?: number
 }): Promise<ActivitiesResponse> {
   const searchParams = new URLSearchParams()
   if (params?.provider) searchParams.set("provider", params.provider)
-  if (params?.from) searchParams.set("from", params.from)
-  if (params?.to) searchParams.set("to", params.to)
+  if (params?.startDate ?? params?.from) searchParams.set("startDate", params?.startDate ?? params?.from ?? "")
+  if (params?.endDate ?? params?.to) searchParams.set("endDate", params?.endDate ?? params?.to ?? "")
   if (params?.limit) searchParams.set("limit", params.limit.toString())
 
   const url = `/v1/wearables/activities${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
@@ -273,14 +328,16 @@ export interface SleepResponse {
 
 export function getSleep(params?: {
   provider?: string
+  startDate?: string
+  endDate?: string
   from?: string
   to?: string
   limit?: number
 }): Promise<SleepResponse> {
   const searchParams = new URLSearchParams()
   if (params?.provider) searchParams.set("provider", params.provider)
-  if (params?.from) searchParams.set("from", params.from)
-  if (params?.to) searchParams.set("to", params.to)
+  if (params?.startDate ?? params?.from) searchParams.set("startDate", params?.startDate ?? params?.from ?? "")
+  if (params?.endDate ?? params?.to) searchParams.set("endDate", params?.endDate ?? params?.to ?? "")
   if (params?.limit) searchParams.set("limit", params.limit.toString())
 
   const url = `/v1/wearables/sleep${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
@@ -305,14 +362,16 @@ export interface DailiesResponse {
 
 export function getDailies(params?: {
   provider?: string
+  startDate?: string
+  endDate?: string
   from?: string
   to?: string
   limit?: number
 }): Promise<DailiesResponse> {
   const searchParams = new URLSearchParams()
   if (params?.provider) searchParams.set("provider", params.provider)
-  if (params?.from) searchParams.set("from", params.from)
-  if (params?.to) searchParams.set("to", params.to)
+  if (params?.startDate ?? params?.from) searchParams.set("startDate", params?.startDate ?? params?.from ?? "")
+  if (params?.endDate ?? params?.to) searchParams.set("endDate", params?.endDate ?? params?.to ?? "")
   if (params?.limit) searchParams.set("limit", params.limit.toString())
 
   const url = `/v1/wearables/dailies${searchParams.toString() ? `?${searchParams.toString()}` : ""}`

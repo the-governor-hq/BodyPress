@@ -14,7 +14,7 @@ import {
   setOnboardingData,
   isAuthenticated,
 } from "@/lib/auth"
-import { updateProfile, requestMagicLink, ApiError } from "@/lib/api"
+import { updateProfile, subscribe, ApiError } from "@/lib/api"
 
 const STEPS = [
   { id: "welcome", title: "Welcome", component: WelcomeStep },
@@ -61,22 +61,27 @@ export default function OnboardingPage() {
     setOnboardingData(formData)
 
     if (isPreferencesStep) {
-      // After preferences, send magic link if not yet authenticated
+      // After preferences, subscribe user (backend sends verification email with magic link)
       const email = getPendingEmail()
       const authenticated = isAuthenticated()
       console.log("[Onboarding] Preferences step - Email:", email, "Authenticated:", authenticated)
       
       if (email && !authenticated) {
         try {
-          console.log("[Onboarding] Requesting magic link for:", email)
-          await requestMagicLink(email)
-          console.log("[Onboarding] Magic link sent successfully")
+          console.log("[Onboarding] Subscribing user to send verification email:", email)
+          await subscribe({
+            email,
+            name: formData.name || undefined,
+            timezone: formData.timezone || undefined,
+            goals: formData.goals,
+          })
+          console.log("[Onboarding] Verification email sent via subscribe endpoint")
         } catch (err) {
-          console.error("[Onboarding] Magic link error:", err)
+          console.error("[Onboarding] Subscribe error:", err)
           // Non-blocking — user may already have a valid link
         }
       } else {
-        console.log("[Onboarding] Skipping magic link - Email:", !!email, "Not Authenticated:", !authenticated)
+        console.log("[Onboarding] Skipping subscribe - Email:", !!email, "Not Authenticated:", !authenticated)
       }
     }
 
