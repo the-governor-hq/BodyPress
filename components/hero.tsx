@@ -20,6 +20,7 @@ export function Hero() {
       setSessionPendingEmail(email)
       // Reset per-session subscribe guard for a fresh onboarding attempt
       sessionStorage.removeItem("onboarding_subscribe_sent")
+      sessionStorage.removeItem("onboarding_subscribe_state")
       // Redirect to onboarding
       router.push("/onboarding")
     }

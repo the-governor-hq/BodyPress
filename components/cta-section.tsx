@@ -25,6 +25,7 @@ export function CtaSection() {
       setPendingEmail(email)
       setSessionPendingEmail(email)
       sessionStorage.removeItem("onboarding_subscribe_sent")
+      sessionStorage.removeItem("onboarding_subscribe_state")
       setSubmitted(true)
       setTimeout(() => router.push("/onboarding"), 1200)
     } catch (err) {

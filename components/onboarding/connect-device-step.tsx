@@ -78,9 +78,22 @@ export function ConnectDeviceStep({ formData, updateFormData }: ConnectDeviceSte
     if (!hasHydrated) return
 
     const sendVerificationEmail = async () => {
+      const sendState = sessionStorage.getItem("onboarding_subscribe_state")
+      if (sendState === "pending") {
+        console.log("[ConnectDeviceStep] Skipping subscribe: request already in-flight")
+        return
+      }
+
+      if (sendState === "done") {
+        console.log("[ConnectDeviceStep] Skipping subscribe: request already completed")
+        sessionStorage.setItem("onboarding_subscribe_sent", "true")
+        return
+      }
+
       const alreadySent = sessionStorage.getItem("onboarding_subscribe_sent") === "true"
       if (alreadySent) {
         console.log("[ConnectDeviceStep] Skipping subscribe: already sent in this session")
+        sessionStorage.setItem("onboarding_subscribe_state", "done")
         return
       }
 
@@ -96,6 +109,7 @@ export function ConnectDeviceStep({ formData, updateFormData }: ConnectDeviceSte
       }
 
       const onboardingData = getOnboardingData()
+      sessionStorage.setItem("onboarding_subscribe_state", "pending")
 
       try {
         console.log("[ConnectDeviceStep] Calling POST /v1/subscribers", {
@@ -113,19 +127,23 @@ export function ConnectDeviceStep({ formData, updateFormData }: ConnectDeviceSte
         })
 
         sessionStorage.setItem("onboarding_subscribe_sent", "true")
+        sessionStorage.setItem("onboarding_subscribe_state", "done")
         console.log("[ConnectDeviceStep] POST /v1/subscribers succeeded")
       } catch (error) {
-        console.error("[ConnectDeviceStep] POST /v1/subscribers failed", error)
+        console.warn("[ConnectDeviceStep] POST /v1/subscribers failed; trying request-link fallback", error)
 
         try {
-          console.warn("[ConnectDeviceStep] Falling back to POST /v1/auth/request-link")
+          console.log("[ConnectDeviceStep] Calling fallback POST /v1/auth/request-link")
           await requestMagicLink({
             email,
             name: onboardingData.name || undefined,
           })
           sessionStorage.setItem("onboarding_subscribe_sent", "true")
+          sessionStorage.setItem("onboarding_subscribe_state", "done")
           console.log("[ConnectDeviceStep] POST /v1/auth/request-link succeeded")
         } catch (fallbackError) {
+          sessionStorage.removeItem("onboarding_subscribe_state")
+
           if (fallbackError instanceof ApiError) {
             console.error("[ConnectDeviceStep] Fallback request-link failed", {
               status: fallbackError.status,
