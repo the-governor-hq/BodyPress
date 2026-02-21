@@ -206,8 +206,41 @@ export interface VerifyTokenResponse {
   user: { id: string; email: string; name?: string; onboardingDone: boolean }
 }
 
-export function verifyMagicLink(token: string): Promise<VerifyTokenResponse> {
-  return request<VerifyTokenResponse>(`/v1/auth/verify?token=${encodeURIComponent(token)}`)
+function isVerifyTokenResponse(value: unknown): value is VerifyTokenResponse {
+  if (!value || typeof value !== "object") return false
+
+  const maybe = value as {
+    token?: unknown
+    user?: {
+      id?: unknown
+      email?: unknown
+      onboardingDone?: unknown
+    }
+  }
+
+  return (
+    typeof maybe.token === "string" &&
+    typeof maybe.user?.id === "string" &&
+    typeof maybe.user?.email === "string" &&
+    typeof maybe.user?.onboardingDone === "boolean"
+  )
+}
+
+export async function verifyMagicLink(token: string): Promise<VerifyTokenResponse> {
+  const response = await request<VerifyTokenResponse | { data?: unknown }>(
+    `/v1/auth/verify?token=${encodeURIComponent(token)}`,
+  )
+
+  if (isVerifyTokenResponse(response)) return response
+
+  const wrapped =
+    response && typeof response === "object" && "data" in response
+      ? (response as { data?: unknown }).data
+      : undefined
+
+  if (isVerifyTokenResponse(wrapped)) return wrapped
+
+  throw new ApiError(500, "Unexpected verification response format", response)
 }
 
 export interface MeResponse {

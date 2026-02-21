@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { verifyMagicLink, updateProfile, ApiError } from "@/lib/api"
@@ -17,7 +17,6 @@ export default function VerifyPage() {
   const router = useRouter()
   const [state, setState] = useState<State>("verifying")
   const [message, setMessage] = useState("")
-  const completedRef = useRef(false)
 
   useEffect(() => {
     const token = searchParams.get("token")
@@ -49,7 +48,6 @@ export default function VerifyPage() {
 
     verifyMagicLink(token)
       .then(async (res) => {
-        completedRef.current = true
         setToken(res.token)
         markKnownEmail(res.user.email)
 
@@ -81,7 +79,7 @@ export default function VerifyPage() {
       })
       .catch((err) => {
         const alreadyDone = sessionStorage.getItem(doneKey) === "true"
-        if (completedRef.current || alreadyDone) {
+        if (alreadyDone) {
           console.warn("[Verify] Ignoring stale verify error after successful verification")
           return
         }
