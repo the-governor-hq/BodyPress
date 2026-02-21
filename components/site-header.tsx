@@ -5,24 +5,21 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Activity, Menu, X, LayoutDashboard, LogOut } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { clearPendingEmail, clearToken, isAuthenticated } from "@/lib/auth"
-import { useSessionStore } from "@/lib/session-store"
+import { useAuthStore } from "@/lib/auth-store"
 
 export function SiteHeader() {
   const router = useRouter()
-  const clearSessionPendingEmail = useSessionStore((state) => state.clearPendingEmail)
+  const isAuthed = useAuthStore((state) => state.isAuthed)
+  const initializeAuth = useAuthStore((state) => state.initializeAuth)
+  const signOut = useAuthStore((state) => state.signOut)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isAuthed, setIsAuthed] = useState(false)
 
   useEffect(() => {
-    setIsAuthed(isAuthenticated())
-  }, [])
+    initializeAuth()
+  }, [initializeAuth])
 
   const handleSignOut = () => {
-    clearToken()
-    clearPendingEmail()
-    clearSessionPendingEmail()
-    setIsAuthed(false)
+    signOut()
     setMobileMenuOpen(false)
     router.replace("/")
   }

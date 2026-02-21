@@ -2,6 +2,7 @@ const JWT_KEY = "bp_token"
 const EMAIL_KEY = "bp_email"
 const LEGACY_EMAIL_KEY = "userEmail"
 const ONBOARDING_KEY = "bp_onboarding"
+const AUTH_EVENT = "bp-auth-changed"
 
 export type OnboardingData = {
   name: string
@@ -19,10 +20,16 @@ export function getToken(): string | null {
 
 export function setToken(token: string): void {
   localStorage.setItem(JWT_KEY, token)
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_EVENT))
+  }
 }
 
 export function clearToken(): void {
   localStorage.removeItem(JWT_KEY)
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_EVENT))
+  }
 }
 
 export function isAuthenticated(): boolean {

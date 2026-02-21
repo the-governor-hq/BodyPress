@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Activity, Heart, TrendingUp, Plus, Unplug, RefreshCw, Loader2, LogOut } from "lucide-react"
-import { clearPendingEmail, clearToken, isAuthenticated } from "@/lib/auth"
+import { isAuthenticated } from "@/lib/auth"
 import { 
   getConnections, 
   getOAuthConnectUrl, 
@@ -14,7 +14,7 @@ import {
 } from "@/lib/api"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { useSessionStore } from "@/lib/session-store"
+import { useAuthStore } from "@/lib/auth-store"
 
 const DEVICES = [
   {
@@ -31,7 +31,7 @@ const DEVICES = [
 
 export default function DashboardPage() {
   const router = useRouter()
-  const clearSessionPendingEmail = useSessionStore((state) => state.clearPendingEmail)
+  const signOut = useAuthStore((state) => state.signOut)
   const [connections, setConnections] = useState<Connection[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState<string | null>(null)
@@ -109,9 +109,7 @@ export default function DashboardPage() {
     try {
       setSigningOut(true)
     } finally {
-      clearToken()
-      clearPendingEmail()
-      clearSessionPendingEmail()
+      signOut()
       router.replace("/")
     }
   }

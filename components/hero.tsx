@@ -5,13 +5,12 @@ import { useRouter } from "next/navigation"
 import { ArrowRight, Activity, Loader2, LogOut, Unplug } from "lucide-react"
 import {
   clearPendingEmail,
-  clearToken,
   getPendingEmail,
-  isAuthenticated,
   setPendingEmail,
 } from "@/lib/auth"
 import { useSessionStore } from "@/lib/session-store"
 import { ApiError, Connection, disconnectDevice, getConnections, getMe } from "@/lib/api"
+import { useAuthStore } from "@/lib/auth-store"
 
 export function Hero() {
   const router = useRouter()
@@ -19,12 +18,19 @@ export function Hero() {
   const sessionPendingEmail = useSessionStore((state) => state.pendingEmail)
   const setSessionPendingEmail = useSessionStore((state) => state.setPendingEmail)
   const clearSessionPendingEmail = useSessionStore((state) => state.clearPendingEmail)
+  const isAuthed = useAuthStore((state) => state.isAuthed)
+  const initializedAuth = useAuthStore((state) => state.initialized)
+  const initializeAuth = useAuthStore((state) => state.initializeAuth)
+  const signOut = useAuthStore((state) => state.signOut)
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [loadingStatus, setLoadingStatus] = useState(true)
-  const [isAuthed, setIsAuthed] = useState(false)
   const [connections, setConnections] = useState<Connection[]>([])
   const [disconnecting, setDisconnecting] = useState<"garmin" | "fitbit" | null>(null)
+
+  useEffect(() => {
+    initializeAuth()
+  }, [initializeAuth])
 
   useEffect(() => {
     if (!hasHydrated) return
@@ -35,8 +41,7 @@ export function Hero() {
         setEmail(persistedEmail)
       }
 
-      if (!isAuthenticated()) {
-        setIsAuthed(false)
+      if (!isAuthed) {
         setConnections([])
         setLoadingStatus(false)
         return
@@ -54,9 +59,8 @@ export function Hero() {
         }
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
-          clearToken()
+          signOut()
         }
-        setIsAuthed(false)
         setConnections([])
       } finally {
         setLoadingStatus(false)
@@ -64,13 +68,12 @@ export function Hero() {
     }
 
     void hydrateSession()
-  }, [hasHydrated, sessionPendingEmail, setSessionPendingEmail])
+  }, [hasHydrated, sessionPendingEmail, setSessionPendingEmail, isAuthed, signOut])
 
   const handleSignOut = () => {
-    clearToken()
+    signOut()
     clearPendingEmail()
     clearSessionPendingEmail()
-    setIsAuthed(false)
     setConnections([])
     setSubmitted(false)
   }
@@ -138,7 +141,7 @@ export function Hero() {
           quality, and UV index using AI agents.
         </p>
 
-        {loadingStatus ? (
+        {loadingStatus || !initializedAuth ? (
           <div className="mx-auto mt-6 flex max-w-md items-center justify-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Checking session…
