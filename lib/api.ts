@@ -50,6 +50,18 @@ function buildDebugUrl(config: AxiosRequestConfig): string {
   return queryString ? `${joined}?${queryString}` : joined
 }
 
+function debugBody(value: unknown): unknown {
+  if (value == null) return value
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return value
+  }
+  try {
+    return JSON.parse(JSON.stringify(value))
+  } catch {
+    return String(value)
+  }
+}
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
@@ -92,7 +104,10 @@ apiClient.interceptors.response.use(
       console.error(
         `[API !!] ${error.response?.status ?? "ERR"} ${error.config?.method?.toUpperCase()} ${debugUrl}`,
         error.message,
-        error.response?.data,
+        {
+          statusText: error.response?.statusText,
+          data: debugBody(error.response?.data),
+        },
       )
     }
     

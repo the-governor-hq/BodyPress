@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Watch, Activity, Heart, Clock, TrendingUp, Shield, Mail } from "lucide-react"
 import { motion } from "framer-motion"
 import { isAuthenticated, getPendingEmail, getOnboardingData } from "@/lib/auth"
-import { getOAuthConnectUrl, subscribe } from "@/lib/api"
+import { ApiError, getOAuthConnectUrl, requestMagicLink, subscribe } from "@/lib/api"
 import { useSessionStore } from "@/lib/session-store"
 
 interface ConnectDeviceStepProps {
@@ -116,6 +116,26 @@ export function ConnectDeviceStep({ formData, updateFormData }: ConnectDeviceSte
         console.log("[ConnectDeviceStep] POST /v1/subscribers succeeded")
       } catch (error) {
         console.error("[ConnectDeviceStep] POST /v1/subscribers failed", error)
+
+        try {
+          console.warn("[ConnectDeviceStep] Falling back to POST /v1/auth/request-link")
+          await requestMagicLink({
+            email,
+            name: onboardingData.name || undefined,
+          })
+          sessionStorage.setItem("onboarding_subscribe_sent", "true")
+          console.log("[ConnectDeviceStep] POST /v1/auth/request-link succeeded")
+        } catch (fallbackError) {
+          if (fallbackError instanceof ApiError) {
+            console.error("[ConnectDeviceStep] Fallback request-link failed", {
+              status: fallbackError.status,
+              message: fallbackError.message,
+              body: fallbackError.body,
+            })
+          } else {
+            console.error("[ConnectDeviceStep] Fallback request-link failed", fallbackError)
+          }
+        }
       }
     }
 
