@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios"
+import axiosRetry from "axios-retry"
 import { getToken } from "./auth"
 
 function resolveBaseUrl(): string {
@@ -19,10 +20,43 @@ export class ApiError extends Error {
     public status: number,
     message: string,
     public body?: unknown,
+    public isNetworkError: boolean = false,
   ) {
     super(message)
     this.name = "ApiError"
   }
+}
+
+export function isNetworkError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.isNetworkError
+  }
+  if (axios.isAxiosError(error)) {
+    return !error.response && Boolean(error.request)
+  }
+  return false
+}
+
+export function getUserFriendlyErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.isNetworkError) {
+      return "Unable to connect to the server. Please check your internet connection and try again."
+    }
+    if (error.status === 401) {
+      return "Your session has expired. Please sign in again."
+    }
+    if (error.status === 403) {
+      return "You don't have permission to perform this action."
+    }
+    if (error.status === 404) {
+      return "The requested resource was not found."
+    }
+    if (error.status >= 500) {
+      return "A server error occurred. Please try again later."
+    }
+    return error.message
+  }
+  return "An unexpected error occurred. Please try again."
 }
 
 // Create axios instance with default config
@@ -31,6 +65,20 @@ const apiClient = axios.create({
   timeout: 15000, // 15 second timeout
   headers: {
     "Content-Type": "application/json",
+  },
+})
+
+// Configure retry logic
+axiosRetry(apiClient, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    // Retry on network errors and 5xx server errors
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || 
+           (error.response?.status ? error.response.status >= 500 : false)
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    console.log(`[API] Retry attempt ${retryCount} for ${requestConfig.method?.toUpperCase()} ${requestConfig.url}`)
   },
 })
 
@@ -99,26 +147,35 @@ apiClient.interceptors.response.use(
     return response
   },
   (error: AxiosError) => {
+    // Check if it's a network error (no response received)
+    const isNetworkErr = !error.response && Boolean(error.request)
+    
     if (process.env.NODE_ENV === "development") {
       const debugUrl = buildDebugUrl(error.config ?? {})
       console.error(
-        `[API !!] ${error.response?.status ?? "ERR"} ${error.config?.method?.toUpperCase()} ${debugUrl}`,
-        error.message,
+        `[API !!] ${error.response?.status ?? "NETWORK_ERROR"} ${error.config?.method?.toUpperCase()} ${debugUrl}`,
+        isNetworkErr ? "Network error - no response received" : error.message,
         {
           statusText: error.response?.statusText,
           data: debugBody(error.response?.data),
+          isNetworkError: isNetworkErr,
         },
       )
     }
     
-    const status = error.response?.status || 500
+    const status = error.response?.status || (isNetworkErr ? 0 : 500)
     const body = error.response?.data
-    const message =
-      typeof body === "object" && body !== null && "error" in body
-        ? String((body as { error: unknown }).error)
-        : error.message || `HTTP ${status}`
     
-    throw new ApiError(status, message, body)
+    let message: string
+    if (isNetworkErr) {
+      message = "Network error: Unable to reach the server"
+    } else if (typeof body === "object" && body !== null && "error" in body) {
+      message = String((body as { error: unknown }).error)
+    } else {
+      message = error.message || `HTTP ${status}`
+    }
+    
+    throw new ApiError(status, message, body, isNetworkErr)
   }
 )
 
@@ -135,15 +192,24 @@ async function request<T>(
     return response.data
   } catch (error) {
     if (error instanceof ApiError) throw error
+    
     if (axios.isAxiosError(error)) {
-      const status = error.response?.status || 500
+      const isNetworkErr = !error.response && Boolean(error.request)
+      const status = error.response?.status || (isNetworkErr ? 0 : 500)
       const body = error.response?.data
-      const message =
-        typeof body === "object" && body !== null && "error" in body
-          ? String((body as { error: unknown }).error)
-          : error.message || `HTTP ${status}`
-      throw new ApiError(status, message, body)
+      
+      let message: string
+      if (isNetworkErr) {
+        message = "Network error: Unable to reach the server"
+      } else if (typeof body === "object" && body !== null && "error" in body) {
+        message = String((body as { error: unknown }).error)
+      } else {
+        message = error.message || `HTTP ${status}`
+      }
+      
+      throw new ApiError(status, message, body, isNetworkErr)
     }
+    
     throw error
   }
 }

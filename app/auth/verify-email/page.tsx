@@ -1,10 +1,11 @@
 "use client"
 
-import { useMemo } from "react"
+import { Suspense, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { MailCheck } from "lucide-react"
+import { MailCheck, Loader2 } from "lucide-react"
+import { AUTH_ROUTES } from "@/lib/auth-navigation"
 
-export default function VerifyEmailPendingPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -21,12 +22,24 @@ export default function VerifyEmailPendingPage() {
         </p>
 
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push(AUTH_ROUTES.HOME)}
           className="mt-6 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:brightness-110 transition-all"
         >
           Back to home
         </button>
       </div>
     </div>
+  )
+}
+
+export default function VerifyEmailPendingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }

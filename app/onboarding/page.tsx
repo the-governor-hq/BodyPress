@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, Fragment } from "react"
+import { Suspense, useState, useEffect, Fragment } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react"
+import { ArrowRight, ArrowLeft, Check, Loader2, WifiOff } from "lucide-react"
 import { WelcomeStep } from "@/components/onboarding/welcome-step"
 import { PreferencesStep } from "@/components/onboarding/preferences-step"
 import { ConnectDeviceStep } from "@/components/onboarding/connect-device-step"
@@ -12,8 +12,9 @@ import {
   getOnboardingData,
   setOnboardingData,
 } from "@/lib/auth"
-import { updateProfile, ApiError } from "@/lib/api"
+import { updateProfile, ApiError, getUserFriendlyErrorMessage, isNetworkError } from "@/lib/api"
 import { useAuthSession } from "@/hooks/use-auth-session"
+import { AUTH_ROUTES } from "@/lib/auth-navigation"
 import { toast } from "@/hooks/use-toast"
 
 const STEPS = [
@@ -23,10 +24,10 @@ const STEPS = [
   { id: "success", title: "All Set", component: SuccessStep },
 ]
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { isAuthed, loading, hasConnectedDevice } = useAuthSession()
+  const { isAuthed, loading, hasConnectedDevice, error: sessionError, isOnline } = useAuthSession()
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState({
@@ -40,7 +41,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!loading && isAuthed && hasConnectedDevice) {
       console.log("[Onboarding] User has connected device; redirecting to dashboard.")
-      router.replace("/dashboard")
+      router.replace(AUTH_ROUTES.DASHBOARD)
     }
   }, [loading, isAuthed, hasConnectedDevice, router])
 
@@ -51,7 +52,7 @@ export default function OnboardingPage() {
       setFormData((prev) => ({ ...prev, ...saved }))
     }
 
-    // Handle OAuth callback errors - redirect to dashboard
+    // Handle OAuth callback errors
     const error = searchParams.get("error")
     const provider = searchParams.get("provider")
     if (error) {
@@ -61,8 +62,9 @@ export default function OnboardingPage() {
         title: "Connection Failed",
         description: `Failed to connect ${providerName}. Please try again.`,
         variant: "destructive",
+        duration: 5000,
       })
-      router.replace("/dashboard")
+      router.replace(AUTH_ROUTES.DASHBOARD)
       return
     }
 
@@ -112,8 +114,20 @@ export default function OnboardingPage() {
         console.log("[Onboarding] Profile saved successfully")
       } catch (err) {
         console.error("[Onboarding] Profile update error:", err)
-        if (err instanceof ApiError && err.status !== 401) {
-          // Still advance on non-auth errors; profile can be updated later
+        
+        const errorMsg = getUserFriendlyErrorMessage(err)
+        const isNetworkErr = isNetworkError(err)
+        
+        toast({
+          title: isNetworkErr ? "Connection Error" : "Error Saving Profile",
+          description: errorMsg,
+          variant: "destructive",
+          duration: 5000,
+        })
+        
+        // Still advance on non-auth errors; profile can be updated later
+        if (!(err instanceof ApiError && err.status === 401)) {
+          // Don't block progression on network errors
         }
       } finally {
         setSubmitting(false)
@@ -141,6 +155,14 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-linear-to-b from-background to-secondary/20 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
+        {/* Offline Indicator */}
+        {!isOnline && (
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-center gap-2 text-destructive">
+            <WifiOff className="h-5 w-5" />
+            <span className="text-sm font-medium">You're offline. Some features may not work.</span>
+          </div>
+        )}
+
         {/* Progress Bar */}
         {!isLastStep && (
           <div className="mb-8">
@@ -234,5 +256,17 @@ export default function OnboardingPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
   )
 }
